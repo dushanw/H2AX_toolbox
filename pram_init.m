@@ -10,7 +10,7 @@ function pram = pram_init()
 
     pram.ds_imread_channedls                = 1;
     pram.ds_imread_channedls_scale_method   = 'rescale10k';     % {'rescale10k','rescale1k','max','mean','none'} 
-    pram.exp_type                           = 'h2ax_direct';    % {'h2ax_direct','h2ax_simple','h2ax'}
+    pram.exp_type                           = 'h2ax_adv';       % {'h2ax_direct','h2ax_adv','h2ax'}
 
     pram.Nx                 = 32;
     pram.Nc                 = 1;
@@ -18,4 +18,11 @@ function pram = pram_init()
     pram.classNames         = ["bg","fg"];
     pram.pxLblIds           = [0 1];
     
+    pram.executionEnvironment   = 'auto';
+    pram.gammaMse               = 0.1;
+
 end
+
+
+
+

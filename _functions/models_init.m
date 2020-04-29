@@ -9,7 +9,7 @@ function models = models_init(pram)
     switch pram.exp_type
         case 'h2ax_direct'
             models.imgprocessor     = gennet_dncnnSegmenter(pram.Nx,pram.Nc,pram.N_classes);
-        case 'h2ax_simple'
+        case 'h2ax_adv'
             models.encoder          = gendlnet_dummy(pram.Nx,pram.Nc);                           % dummy network 
             models.decoder          = gendlnet_dummy(pram.Nx,pram.Nc);
             models.imgprocessor     = gendlnet_dncnnSegmenter    (pram.Nx,pram.Nc,pram.N_classes);

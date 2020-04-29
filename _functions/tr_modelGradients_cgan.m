@@ -23,3 +23,4 @@ function [gradientsEncoder, gradientsGenerator, gradientsDiscriminator, stateEnc
     gradientsDiscriminator  = dlgradient(lossDiscriminator, dlnetDiscriminator.Learnables);
 
 end
+

@@ -21,6 +21,18 @@ function pram = pram_init()
     pram.executionEnvironment   = 'auto';
     pram.gammaMse               = 0.1;
 
+    pram.numEpochs                  = 20;      
+    pram.miniBatchSize              = 64;
+    pram.learnRateImgprocessor      = 0.0002;
+    pram.learnRateDiscriminator     = 0.0001;    
+    pram.gradientDecayFactor        = 0.5;
+    pram.squaredGradientDecayFactor = 0.999;
+    
+    pram.trailingAvgDiscriminator   = [];
+    pram.trailingAvgSqDiscriminator = [];    
+    pram.trailingAvgImgprocessor    = [];
+    pram.trailingAvgSqImgprocessor  = [];
+
 end
 
 

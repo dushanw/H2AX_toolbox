@@ -4,7 +4,7 @@ function [imgprocessor discriminator info] = tr_segmenter_adv(imgprocessor,discr
 
     %% network parameters 
     patchSize       = [pram.Nx pram.Nx];
-    miniBatchSize   = 64;
+    miniBatchSize   = pram.miniBatchSize;
 
     %% set other datastore parameters
     I_temp          = imds_gt.read;     
@@ -19,7 +19,7 @@ function [imgprocessor discriminator info] = tr_segmenter_adv(imgprocessor,discr
     iteration       = 0;
     start           = tic;
     
-    for i = 1:opt.numEpochs
+    for i = 1:pram.numEpochs
 
         % Reset and shuffle datastore.
         reset(patchds_tr);

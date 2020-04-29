@@ -18,11 +18,11 @@ classdef DABBA_MU < handle
        function obj = DABBA_MU(pram)
            obj.pram     = pram;
 
-           obj.imds_gt  = imageDatastore     (parm.dir_imds_gt      ,'ReadFcn',@(fname)ds_imread(fname,pram));           
-           obj.imds_exp = imageDatastore     (parm.dir_imds_exp     ,'ReadFcn',@(fname)ds_imread(fname,pram));
-           obj.pxds_gt  = pixelLabelDatastore(parm.dir_pxds_gt      ,parm.classNames,parm.pixelLabelIDs);
+           obj.imds_gt  = imageDatastore     (pram.dir_imds_gt      ,'ReadFcn',@(fname)ds_imread(fname,pram));           
+           obj.imds_exp = imageDatastore     (pram.dir_imds_exp     ,'ReadFcn',@(fname)ds_imread(fname,pram));
+           obj.pxds_gt  = pixelLabelDatastore(pram.dir_pxds_gt      ,pram.classNames,pram.pxLblIds);
            
-           models       = models_init(pram)
+           models       = models_init(pram);
            obj.encoder          = models.encoder;
            obj.decoder          = models.decoder;
            obj.imgprocessor     = models.imgprocessor;

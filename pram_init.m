@@ -3,12 +3,14 @@
 
 function pram = pram_init()
     
-    parm.dir_imds_gt    = '';    
-    parm.dir_imds_exp   = '';
-    parm.dir_pxds_gt    = '';
+    pram.dir_dataroot   = '/home/harvard/Dropbox (Harvard University)/WorkingData/20200426_Bevin_Nuc/Nuclei Counter (20x, 40x)/20x Nuclei Counter/';
+    pram.dir_imds_gt    = [pram.dir_dataroot 'Knime segmentation maps/Originals'];  
+    pram.dir_imds_exp   = [pram.dir_dataroot 'Knime segmentation maps/Originals'];  
+    pram.dir_pxds_gt    = [pram.dir_dataroot 'Knime segmentation maps/pxd'];  
+
     pram.ds_imread_channedls                = 1;
     pram.ds_imread_channedls_scale_method   = 'rescale10k';     % {'rescale10k','rescale1k','max','mean','none'} 
-    pram.exp_type                           = 'h2ax_simple';    % {'h2ax_simple','h2ax'}
+    pram.exp_type                           = 'h2ax_direct';    % {'h2ax_direct','h2ax_simple','h2ax'}
 
     pram.Nx                 = 32;
     pram.Nc                 = 1;

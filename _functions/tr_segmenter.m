@@ -2,7 +2,7 @@
 % 20200429 modified by Dushan N. Wadduwage (wadduwage@fas.harvard.edu)
 % segmenter
 
-function net = tr_segmenter(net0,imds_gt,pxds_gt,pram)
+function net = tr_segmenter(lgraph,imds_gt,pxds_gt,pram)
     
     %% network parameters 
     patchSize       = [pram.Nx pram.Nx];
@@ -19,7 +19,6 @@ function net = tr_segmenter(net0,imds_gt,pxds_gt,pram)
     %% image-patch datastores
     patchds_tr                  = randomPatchExtractionDatastore(imds_gt,pxds_gt,patchSize,'PatchesPerImage',N_PatchesPerImg);
     patchds_tr.MiniBatchSize    = miniBatchSize;
-    lgraph = layerGraph(net0);    
         
     %% train network
     maxEpochs = 8;
@@ -43,9 +42,4 @@ function net = tr_segmenter(net0,imds_gt,pxds_gt,pram)
         'ExecutionEnvironment','multi-gpu');                % 'ValidationData',patchds_val,...
 
     net = trainNetwork(patchds_tr,lgraph,options);
-    save(['./_trainedNetworks/'...
-           pram.net_nameStem ...
-           sprintf('_%dx%d_%s.mat',patchSize(1),patchSize(2),date)],...
-           'net');
-
 end

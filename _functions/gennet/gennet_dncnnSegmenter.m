@@ -1,6 +1,8 @@
-function lgraph = gennet_dncnnSegmenter(size_In, N_classes)
+function lgraph = gennet_dncnnSegmenter(Nx,Nc,N_classes)
 
-    net0_dncnn = denoisingNetwork('dncnn');
+    size_In     = [Nx Nx Nc];
+
+    net0_dncnn  = denoisingNetwork('dncnn');
     lgraph = layerGraph(net0_dncnn.Layers);
     
     lgraph = replaceLayer(lgraph,'InputLayer',imageInputLayer(size_In,'Name','InputLayer','Normalization','none'));

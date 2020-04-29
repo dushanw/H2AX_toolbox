@@ -5,3 +5,5 @@ addpath(genpath('./_CLASSES/'))
 
 parm        = pram_init();
 h2ax_mic    = DABBA_MU(parm);
+
+h2ax_mic.train_direct_imgprocessor;

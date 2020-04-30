@@ -23,33 +23,39 @@ function [imgprocessor discriminator info] = tr_segmenter_adv(imgprocessor,discr
 
         % Reset and shuffle datastore.
         reset(patchds_tr);
-        data_val = read(patchds_tr);
-        I_val    = cat(3,data_val.InputImage{:});
-        L_val    = cat(3,data_val.ResponsePixelLabelImage{:})==pram.classNames(2);
+        data_val        = read(patchds_tr);
+        I_val           = cat(4,data_val.InputImage{:});
+        L_val(:,:,1,:)  = single(cat(4,data_val.ResponsePixelLabelImage{:})==pram.classNames(1));
+        L_val(:,:,2,:)  = single(cat(4,data_val.ResponsePixelLabelImage{:})==pram.classNames(2));
 
-        dlI_val  = dlarray(I_val, 'SSCB');
-        dlL_val  = dlarray(L_val, 'SSCB');
+        dlI_val         = dlarray(I_val, 'SSCB');
+        dlL_val         = dlarray(L_val, 'SSCB');
 
         if (pram.executionEnvironment == "auto" && canUseGPU) || pram.executionEnvironment == "gpu"
-            dlI_val = gpuArray(dlI_val);
-            dlL_val = gpuArray(dlL_val);
+            dlI_val     = gpuArray(dlI_val);
+            dlL_val     = gpuArray(dlL_val);
         end
 
 
 
-        while hasdata(augimds)
+        while hasdata(patchds_tr)
             iteration   = iteration + 1;
 
-            data_tr  = read(patchds_tr);
-            I_tr     = cat(3,data_tr.InputImage{:});
-            L_tr     = cat(3,data_tr.ResponsePixelLabelImage{:})==pram.classNames(2);
+            data_tr         = read(patchds_tr);
+            if size(data_tr,1)<pram.miniBatchSize
+                break
+            end
+            
+            I_tr            = cat(4,data_tr.InputImage{:});
+            L_tr(:,:,1,:)   = single(cat(4,data_tr.ResponsePixelLabelImage{:})==pram.classNames(1));
+            L_tr(:,:,2,:)   = single(cat(4,data_tr.ResponsePixelLabelImage{:})==pram.classNames(2));
 
-            dlI_tr   = dlarray(I_tr, 'SSCB');
-            dlL_tr   = dlarray(L_tr, 'SSCB');
+            dlI_tr          = dlarray(I_tr, 'SSCB');
+            dlL_tr          = dlarray(L_tr, 'SSCB');
             
             if (pram.executionEnvironment == "auto" && canUseGPU) || pram.executionEnvironment == "gpu"
-                dlI_tr = gpuArray(dlI_tr);
-                dlL_tr = gpuArray(dlL_tr);
+                dlI_tr      = gpuArray(dlI_tr);
+                dlL_tr      = gpuArray(dlL_tr);
             end
             
             % Evaluate the model gradients and the generator state
@@ -73,16 +79,16 @@ function [imgprocessor discriminator info] = tr_segmenter_adv(imgprocessor,discr
                 
              % Update the imageprocesser network parameters.
             [imgprocessor.Learnables,pram.trailingAvgImgprocessor,pram.trailingAvgSqImgprocessor] = ...
-                adamupdate(imgprocessor.Learnables, gradientsEncoder, ...
+                adamupdate(imgprocessor.Learnables, gradients_imgprocessor, ...
                            pram.trailingAvgImgprocessor , pram.trailingAvgSqImgprocessor, iteration, ...
                            pram.learnRateImgprocessor   , pram.gradientDecayFactor , pram.squaredGradientDecayFactor);
 
                     
             % Every 100 iterations, display validation results                    
             if mod(iteration,20) == 0 || iteration == 1            
-                dlL_val_gen    = predict(dlnetEncoder,dlI_val);
-                
-                I   = imtile(cat(2,extractdata(dlI_val),extractdata(dlL_val_gen)));
+                dlL_val_gen    = predict(imgprocessor,dlI_val);
+         
+                I   = imtile(cat(2,extractdata(dlI_val),extractdata(dlL_val_gen(:,:,2,:)),extractdata(dlL_val(:,:,2,:))));
                 I   = rescale(I);
                 imagesc(I);axis image
 
@@ -98,14 +104,13 @@ function [imgprocessor discriminator info] = tr_segmenter_adv(imgprocessor,discr
         end
     end
     
-    allLosses           = gather(allLosses);  
-    info.lossEnc        = allLosses(:,1);
-    info.lossGen        = allLosses(:,1);
-    info.lossDisc       = allLosses(:,2);
-    info.lossDiscXhat_d = allLosses(:,3);
-    info.lossDiscX_d    = allLosses(:,4);
-    info.lossDiscXhat_a = allLosses(:,5);
-    info.lossMsec       = allLosses(:,6); 
+    allLosses                       = gather(allLosses);  
+    info.loss_imgprocessor          = allLosses(:,1);
+    info.loss_discriminator         = allLosses(:,2);
+    info.loss_discriminator_fake    = allLosses(:,3);
+    info.loss_discriminator_real    = allLosses(:,4);
+    info.loss_imgprocessor_adv      = allLosses(:,5);
+    info.loss_imgprocessor_mse      = allLosses(:,6);
 end
 
 
@@ -113,7 +118,7 @@ end
 function [gradients_imgprocessor,...
           gradients_discriminator,... 
           state_imgprocessor,...             
-          losses] = f_modelGradients(imgprocessor, discriminator,...
+          allLosses] = f_modelGradients(imgprocessor, discriminator,...
                                      dlI, dlL,...
                                      gamma,epoch,iteration)
 
@@ -127,11 +132,13 @@ function [gradients_imgprocessor,...
     % Calculate the GAN loss
     [loss_imgprocessor, loss_discriminator, allLosses] = f_ganLoss(dlYPred,dlYPred_gen,dlL,dlL_gen,gamma);
 
-%    disp(sprintf('%d-%d:\tenc&gen.loss = %d\tdis.loss = %d\tMSE=%d\tLD_gen=%d\t',epoch,iteration,loss_imgprocessor,loss_discriminator,allLosses(end),allLosses(end-1)));    
+%    disp(sprintf('%d-%d:\timgProcLoss.loss = %d\tdis.loss = %d\tMSE=%d\tLD_gen=%d\t',epoch,iteration,loss_imgprocessor,loss_discriminator,allLosses(end),allLosses(end-1)));    
+    disp(sprintf('%d %d\t LG %d \t LD %d \t Lmse %d',epoch,iteration,loss_imgprocessor,loss_discriminator,allLosses(end)));    
     
+
     % For each network, calculate the gradients with respect to the loss.
     gradients_imgprocessor          = dlgradient(loss_imgprocessor , imgprocessor.Learnables,'RetainData',true);    
-    gradientsDiscriminator          = dlgradient(loss_discriminator, discriminator.Learnables);
+    gradients_discriminator         = dlgradient(loss_discriminator, discriminator.Learnables);
 end
 
 
@@ -145,14 +152,14 @@ function [loss_generator, loss_discriminator, allLosses] = f_ganLoss(dlYPred,dlY
     g_loss_gen      = -mean(log(delta+sigmoid(dlYPred_gen)));               % calculate losses for the generator network.
     loss_mse        = mse(dlL,dlL_gen);
     
-    if isnan(d_lossGenerated.extractdata) | isinf(d_lossGenerated.extractdata)
+    if isnan(d_loss_gen.extractdata) | isinf(d_loss_gen.extractdata)
        xx=1 
     end
 
     loss_discriminator   = d_loss_real + d_loss_gen;                        % combine the losses for the discriminator network.  
-    loss_generator       = g_lossGenerated + lossMSE*gamma;                 % calculate the loss for the generator network.   
+    loss_generator       = g_loss_gen + loss_mse*gamma;                 % calculate the loss for the generator network.   
 
-    allLosses = [loss_generator loss_discriminator d_loss_gen d_loss_real g_loss_gen loss_mse];
+    allLosses = [loss_generator loss_discriminator d_loss_gen d_loss_real g_loss_gen loss_mse*gamma];
 end
 
 

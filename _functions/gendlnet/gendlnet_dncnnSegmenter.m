@@ -9,7 +9,6 @@ function dlnet = gendlnet_dncnnSegmenter(Nx,Nc, N_classes)
     lgraph = replaceLayer(lgraph,'Conv20',convolution2dLayer(1,N_classes,'Name','Conv20'));
     lgraph = removeLayers(lgraph,'FinalRegressionLayer');
     lgraph = addLayers(lgraph,softmaxLayer('Name','Softmax'));
-    % lgraph = addLayers(lgraph,dicePixelClassificationLayer('Name','final_pxClasLayer'));
     
     lgraph = addLayers(lgraph,additionLayer(2,'Name','add_2_5'));
     lgraph = addLayers(lgraph,additionLayer(2,'Name','add_5_10'));
@@ -38,7 +37,9 @@ function dlnet = gendlnet_dncnnSegmenter(Nx,Nc, N_classes)
     lgraph = connectLayers(lgraph,'add_15_19','ReLU19');
     
     lgraph = connectLayers(lgraph,'Conv20','Softmax');
-    % lgraph = connectLayers(lgraph,'Softmax','final_pxClasLayer');
+    
+%     lgraph = addLayers(lgraph,dicePixelClassificationLayer('Name','final_pxClasLayer'));
+%     lgraph = connectLayers(lgraph,'Softmax','final_pxClasLayer');
     
     dlnet  = dlnetwork(lgraph);    
 end

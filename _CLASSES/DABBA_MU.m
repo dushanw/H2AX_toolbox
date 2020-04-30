@@ -11,6 +11,7 @@ classdef DABBA_MU < handle
        imds_gt                  % ground truth images used for training       
        imds_exp                 % dabba_mu measured images
        pxds_gt                  % ground truth annotations
+       tr_info
    end 
    
    methods
@@ -34,7 +35,9 @@ classdef DABBA_MU < handle
        end 
 
        function train_adversarial(self)
-           self.imgprocessor    = tr_segmenter_adv(self.imgprocessor,self.discriminator,self.imds_gt,self.pxds_gt,self.pram)
+           [self.imgprocessor self.discriminators{1} self.tr_info] = ...
+               tr_segmenter_adv(self.imgprocessor,self.discriminators{1},self.imds_gt,self.pxds_gt,self.pram)
+            
        end 
 
 

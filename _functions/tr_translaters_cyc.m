@@ -1,0 +1,204 @@
+% I - gt style images
+% J - exp style images
+% J_fake = enc(I);
+% I_fake = dec(J);
+% I_fake_fake = dec(J_fake)
+% J_fake_fake = dec(I_fake)
+
+function [encoder decoder D_I D_J tr_info] = tr_translaters_cyc ...
+         (encoder,decoder,D_I,D_J,imds_I,imds_J,pram)
+
+    %% network parameters 
+    patchSize       = [pram.Nx pram.Nx];
+    miniBatchSize   = pram.miniBatchSize;
+
+    %% set other datastore parameters
+    I_temp          = imds_I.read;     
+    imds_I.reset;    
+    N_PatchesPerImg = prod(size(I_temp)./patchSize)*16;
+    
+    %% image-patch datastores
+    patchds_tr                  = randomPatchExtractionDatastore(imds_I,imds_J,patchSize,'PatchesPerImage',N_PatchesPerImg);
+    patchds_tr.MiniBatchSize    = miniBatchSize;
+
+    figure
+    iteration       = 0;
+    start           = tic;
+    
+    for i = 1:pram.numEpochs
+
+        % Reset and shuffle datastore.
+        reset(patchds_tr);
+        data_val        = read(patchds_tr);
+        I_val           = cat(4,data_val.InputImage{:});
+        J_val           = cat(4,data_val.ResponsePixelLabelImage{:});
+
+        dlI_val         = dlarray(I_val, 'SSCB');
+        dlJ_val         = dlarray(J_val, 'SSCB');
+
+        if (pram.executionEnvironment == "auto" && canUseGPU) || pram.executionEnvironment == "gpu"
+            dlI_val     = gpuArray(dlI_val);
+            dlJ_val     = gpuArray(dlJ_val);
+        end
+
+
+        while hasdata(patchds_tr)
+            iteration   = iteration + 1;
+
+            data_tr         = read(patchds_tr);
+            if size(data_tr,1)<pram.miniBatchSize
+                break
+            end
+            
+            I_tr        = cat(4,data_tr.InputImage{:});
+            J_tr        = cat(4,data_tr.ResponsePixelLabelImage{:});
+
+            dlI_tr      = dlarray(I_tr, 'SSCB');
+            dlJ_tr      = dlarray(J_tr, 'SSCB');
+            
+            if (pram.executionEnvironment == "auto" && canUseGPU) || pram.executionEnvironment == "gpu"
+                dlI_tr      = gpuArray(dlI_tr);
+                dlJ_tr      = gpuArray(dlJ_tr);
+            end
+            
+            % Evaluate the model gradients and the generator state
+            [gradients_encoder,...
+             gradients_decoder,...
+             gradients_D_I,...
+             gradients_D_J,...
+             state_encoder,...             
+             state_decoder,...             
+             losses_itr] = dlfeval(@f_modelGradients,...
+                                    encoder, decoder, D_I, D_J,...
+                                    dlI_tr, dlJ_tr,...
+                                    i, iteration,pram);
+
+            encoder.State      = state_encoder;
+            decoder.State      = state_decoder;
+
+            allLosses(iteration,:)  = extractdata(losses_itr);  % track losses
+            
+            % Update the _D_I network parameters.
+            [D_I.Learnables,pram.trailingAvg_D_I,pram.trailingAvgSq_D_I] = ...
+                adamupdate(D_I.Learnables, gradients_D_I, ...
+                           pram.trailingAvg_D_I , pram.trailingAvgSq_D_I, iteration, ...
+                           pram.learnRateDiscriminator, pram.gradientDecayFactor, pram.squaredGradientDecayFactor);
+            % Update the _D_J network parameters.
+            [D_J.Learnables,pram.trailingAvg_D_J,pram.trailingAvgSq_D_J] = ...
+                adamupdate(D_J.Learnables, gradients_D_J, ...
+                           pram.trailingAvg_D_J , pram.trailingAvgSq_D_J, iteration, ...
+                           pram.learnRateDiscriminator, pram.gradientDecayFactor, pram.squaredGradientDecayFactor);                
+            % Update the encoder network parameters.
+            [encoder.Learnables,pram.trailingAvg_encoder,pram.trailingAvgSq_encoder] = ...
+                adamupdate(encoder.Learnables, gradients_encoder, ...
+                           pram.trailingAvg_encoder, pram.trailingAvgSq_encoder, iteration, ...
+                           pram.learnRate_encoder, pram.gradientDecayFactor, pram.squaredGradientDecayFactor);
+            % Update the encoder network parameters.
+            [decoder.Learnables,pram.trailingAvg_decoder,pram.trailingAvgSq_decoder] = ...
+                adamupdate(decoder.Learnables, gradients_decoder, ...
+                           pram.trailingAvg_decoder, pram.trailingAvgSq_decoder, iteration, ...
+                           pram.learnRate_decoder, pram.gradientDecayFactor, pram.squaredGradientDecayFactor);
+                    
+            % Every 20 iterations, display validation results                    
+            if mod(iteration,20) == 0 || iteration == 1            
+                dlI_fakefake    = predict(predict(dlI_val));
+                dlJ_fakefake    = predict(predict(dlJ_val));
+         
+                I               = imtile(cat(2,extractdata(dlI_val),extractdata(dlI_fakefake),...
+                                              extractdata(dlJ_val),extractdata(dlJ_fakefake)));
+                I               = rescale(I);
+                imagesc(I);axis image
+
+                % Update the title with training progress information.
+                t_duration      = duration(0,0,toc(start),'Format','hh:mm:ss');
+                title(...
+                    "Epoch: " + i + ", " + ...
+                    "Iteration: " + iteration + ", " + ...
+                    "Elapsed: " + string(t_duration))
+                drawnow
+            end            
+        end
+    end
+    
+    allLosses           = gather(allLosses);  
+    info.loss_encoder   = allLosses(:,1);
+    info.loss_decoder   = allLosses(:,2);
+    info.loss_D_I       = allLosses(:,3);
+    info.loss_D_J       = allLosses(:,4);    
+end
+
+
+%% model gradient function
+function    [gradients_encoder,...
+             gradients_decoder,...
+             gradients_D_I,...
+             gradients_D_J,...
+             state_encoder,...             
+             state_decoder,...             
+             losses_itr] = f_modelGradients(encoder, decoder, D_I, D_J,...
+                                            dlI, dlJ,...
+                                            epoch, iteration, pram)
+
+    % calculate translations and predictions from the discriminators
+    [dlJ_fake       state_encoder]  = forward(state_encoder,dlI);
+    [dlI_fake       state_decoder]  = forward(state_decoder,dlJ);
+    [dlJ_fakefake   state_encoder]  = forward(state_encoder,dlI_fake);
+    [dlI_fakefake   state_decoder]  = forward(state_decoder,dlJ_fake);
+    
+    dlI_pred            = forward(D_I, dlI);
+    dlJ_pred            = forward(D_J, dlJ);
+    dlI_fake_pred       = forward(D_I, dlI_fake);
+    dlJ_fake_pred       = forward(D_J, dlJ_fake);
+    dlI_fakefake_pred   = forward(D_I, dlI_fakefake);    
+    dlJ_fakefake_pred   = forward(D_J, dlJ_fakefake);    
+
+    % Calculate the GAN loss
+    [loss_encoder, loss_decoder, loss_D_I, loss_D_J] = f_ganLoss(dlI_pred,...
+                                                                 dlJ_pred,...
+                                                                 dlI_fake_pred,...
+                                                                 dlJ_fake_pred,...
+                                                                 dlI,dlI_fakefake...
+                                                                 dlJ,dlJ_fakefake,
+                                                                 pram.gamma);
+
+    disp(sprintf('%d %d\t L_enc %d \t L_dec %d \t L_DI %d \t L_DJ %d', epoch,iteration, loss_encoder, loss_decoder, loss_D_I, loss_D_J);    
+    
+    losses_itr = [loss_encoder, loss_decoder, loss_D_I, loss_D_J];
+
+    % For each network, calculate the gradients with respect to the loss.
+    gradients_encoder   = dlgradient(loss_encoder, encoder.Learnables,'RetainData',true);    
+    gradients_decoder   = dlgradient(loss_decoder, decoder.Learnables,'RetainData',true);    
+    gradients_D_I       = dlgradient(loss_D_I    , D_I.Learnables);
+    gradients_D_J       = dlgradient(loss_D_J    , D_J.Learnables);
+end
+
+
+function [loss_encoder, loss_decoder, loss_D_I, loss_D_J] = f_ganLoss(dlI_pred,...
+                                                                      dlJ_pred,...
+                                                                      dlI_fake_pred,...
+                                                                      dlJ_fake_pred,...
+                                                                      dlI,dlI_fakefake,...
+                                                                      dlJ,dlJ_fakefake,...
+                                                                      gamma)
+    
+    loss_D_I_real   = -mean(log(sigmoid(dlI_pred)));
+    loss_D_I_fake   = -mean(log(1-sigmoid(dlI_fake_pred)));           
+
+    loss_D_J_real   = -mean(log(sigmoid(dlJ_pred)));
+    loss_D_J_fake   = -mean(log(1-sigmoid(dlJ_fake_pred)));
+           
+    loss_D_I        = loss_D_I_real + loss_D_I_fake;
+    loss_D_J        = loss_D_J_real + loss_D_J_fake;
+
+    loss_cyc        = (mse(dlI,dlI_fakefake) + mse(dlJ,dlJ_fakefake))/2;
+    
+    loss_encoder    = - mean(log(sigmoid(dlJ_fake_pred)))+gamma*cyc_loss;
+    loss_decoder    = - mean(log(sigmoid(dlI_fake_pred)))+gamma*cyc_loss;
+
+end
+
+
+
+
+
+

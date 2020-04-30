@@ -7,7 +7,17 @@ parm        = pram_init();
 h2ax_mic    = DABBA_MU(parm);
 
 % h2ax_mic.train_direct_imgprocessor;
-h2ax_mic.train_adversarial;
+% h2ax_mic.train_adversarial;
+h2ax_mic.train_cycle;
+
+
+
+
+
+
+
+
+
 
 %% plot losses
 plt_trainingLosses(h2ax_mic.tr_info)

@@ -31,7 +31,7 @@ function [encoder decoder D_I D_J tr_info] = tr_translaters_cyc ...
         reset(patchds_tr);
         data_val        = read(patchds_tr);
         I_val           = cat(4,data_val.InputImage{:});
-        J_val           = cat(4,data_val.ResponsePixelLabelImage{:});
+        J_val           = cat(4,data_val.ResponseImage{:});
 
         dlI_val         = dlarray(I_val, 'SSCB');
         dlJ_val         = dlarray(J_val, 'SSCB');
@@ -51,7 +51,7 @@ function [encoder decoder D_I D_J tr_info] = tr_translaters_cyc ...
             end
             
             I_tr        = cat(4,data_tr.InputImage{:});
-            J_tr        = cat(4,data_tr.ResponsePixelLabelImage{:});
+            J_tr        = cat(4,data_tr.ResponseImage{:});
 
             dlI_tr      = dlarray(I_tr, 'SSCB');
             dlJ_tr      = dlarray(J_tr, 'SSCB');
@@ -101,8 +101,8 @@ function [encoder decoder D_I D_J tr_info] = tr_translaters_cyc ...
                     
             % Every 20 iterations, display validation results                    
             if mod(iteration,20) == 0 || iteration == 1            
-                dlI_fakefake    = predict(predict(dlI_val));
-                dlJ_fakefake    = predict(predict(dlJ_val));
+                dlI_fakefake    = predict(decoder,predict(encoder,dlI_val));
+                dlJ_fakefake    = predict(encoder,predict(decoder,dlJ_val));
          
                 I               = imtile(cat(2,extractdata(dlI_val),extractdata(dlI_fakefake),...
                                               extractdata(dlJ_val),extractdata(dlJ_fakefake)));
@@ -140,10 +140,10 @@ function    [gradients_encoder,...
                                             epoch, iteration, pram)
 
     % calculate translations and predictions from the discriminators
-    [dlJ_fake       state_encoder]  = forward(state_encoder,dlI);
-    [dlI_fake       state_decoder]  = forward(state_decoder,dlJ);
-    [dlJ_fakefake   state_encoder]  = forward(state_encoder,dlI_fake);
-    [dlI_fakefake   state_decoder]  = forward(state_decoder,dlJ_fake);
+    [dlJ_fake       state_encoder]  = forward(encoder,dlI);
+    [dlI_fake       state_decoder]  = forward(decoder,dlJ);
+    [dlJ_fakefake   state_encoder]  = forward(encoder,dlI_fake);
+    [dlI_fakefake   state_decoder]  = forward(decoder,dlJ_fake);
     
     dlI_pred            = forward(D_I, dlI);
     dlJ_pred            = forward(D_J, dlJ);
@@ -157,11 +157,11 @@ function    [gradients_encoder,...
                                                                  dlJ_pred,...
                                                                  dlI_fake_pred,...
                                                                  dlJ_fake_pred,...
-                                                                 dlI,dlI_fakefake...
-                                                                 dlJ,dlJ_fakefake,
-                                                                 pram.gamma);
+                                                                 dlI,dlI_fakefake,...
+                                                                 dlJ,dlJ_fakefake,...
+                                                                 pram.gammaCyc);
 
-    disp(sprintf('%d %d\t L_enc %d \t L_dec %d \t L_DI %d \t L_DJ %d', epoch,iteration, loss_encoder, loss_decoder, loss_D_I, loss_D_J);    
+    disp(sprintf('%d %d\t L_enc %d \t L_dec %d \t L_DI %d \t L_DJ %d', epoch,iteration, loss_encoder, loss_decoder, loss_D_I, loss_D_J));    
     
     losses_itr = [loss_encoder, loss_decoder, loss_D_I, loss_D_J];
 
@@ -192,8 +192,8 @@ function [loss_encoder, loss_decoder, loss_D_I, loss_D_J] = f_ganLoss(dlI_pred,.
 
     loss_cyc        = (mse(dlI,dlI_fakefake) + mse(dlJ,dlJ_fakefake))/2;
     
-    loss_encoder    = - mean(log(sigmoid(dlJ_fake_pred)))+gamma*cyc_loss;
-    loss_decoder    = - mean(log(sigmoid(dlI_fake_pred)))+gamma*cyc_loss;
+    loss_encoder    = - mean(log(sigmoid(dlJ_fake_pred)))+gamma*loss_cyc;
+    loss_decoder    = - mean(log(sigmoid(dlI_fake_pred)))+gamma*loss_cyc;
 
 end
 

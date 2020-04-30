@@ -19,7 +19,7 @@ function pram = pram_init()
     pram.pxLblIds           = [0 1];
     
     pram.executionEnvironment   = 'auto';
-    pram.gammaMse               = 0.1;
+    pram.gammaMse               = 0.01;
 
     pram.numEpochs                  = 1;      
     pram.miniBatchSize              = 48;

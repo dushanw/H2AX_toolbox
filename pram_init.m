@@ -5,7 +5,7 @@ function pram = pram_init()
     
     pram.dir_dataroot   = '/home/harvard/Dropbox (Harvard University)/WorkingData/20200426_Bevin_Nuc/Nuclei Counter (20x, 40x)/20x Nuclei Counter/';
     pram.dir_imds_gt    = [pram.dir_dataroot 'Knime segmentation maps/Originals'];  
-    pram.dir_imds_exp   = [pram.dir_dataroot 'Knime segmentation maps/Originals'];  
+    pram.dir_imds_exp   = [pram.dir_dataroot '20.02.21 Ki67 24h set A'];  
     pram.dir_pxds_gt    = [pram.dir_dataroot 'Knime segmentation maps/pxd'];  
 
     pram.ds_imread_channedls                = 1;

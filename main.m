@@ -8,9 +8,17 @@ h2ax_mic    = DABBA_MU(parm);
 
 % h2ax_mic.train_direct_imgprocessor;
 % h2ax_mic.train_adversarial;
+
+h2ax_mic.pram.gammaCyc = 0.001
 h2ax_mic.train_cycle;
 
-
+figure;
+subplot(1,2,1);
+plot(h2ax_mic.tr_info.loss_encoder);hold on;
+plot(h2ax_mic.tr_info.loss_decoder	)
+subplot(1,2,2);
+plot(h2ax_mic.tr_info.loss_D_I);hold on;
+plot(h2ax_mic.tr_info.loss_D_J)
 
 
 

@@ -16,9 +16,11 @@ function [encoder decoder D_I D_J tr_info] = tr_translaters_cyc ...
     I_temp          = imds_I.read;     
     imds_I.reset;    
     N_PatchesPerImg = prod(size(I_temp)./patchSize)*16;
+    N_files         = min(length(imds_I.Files),length(imds_J.Files));
     
     %% image-patch datastores
-    patchds_tr                  = randomPatchExtractionDatastore(imds_I,imds_J,patchSize,'PatchesPerImage',N_PatchesPerImg);
+    patchds_tr                  = randomPatchExtractionDatastore(imds_I.subset(1:N_files),imds_J.subset(1:N_files),...
+                                                                 patchSize,'PatchesPerImage',N_PatchesPerImg);
     patchds_tr.MiniBatchSize    = miniBatchSize;
 
     figure
@@ -101,13 +103,12 @@ function [encoder decoder D_I D_J tr_info] = tr_translaters_cyc ...
                     
             % Every 20 iterations, display validation results                    
             if mod(iteration,20) == 0 || iteration == 1            
-                dlI_fakefake    = predict(decoder,predict(encoder,dlI_val));
-                dlJ_fakefake    = predict(encoder,predict(decoder,dlJ_val));
+                dlJ_fake    = predict(encoder,dlI_val);
+                dlI_fake    = predict(decoder,dlJ_val);
          
-                I               = imtile(cat(2,extractdata(dlI_val),extractdata(dlI_fakefake),...
-                                              extractdata(dlJ_val),extractdata(dlJ_fakefake)));
-                I               = rescale(I);
-                imagesc(I);axis image
+                img_I       = rescale(imtile(cat(2, extractdata(dlI_val),extractdata(dlI_fake))));
+                img_J       = rescale(imtile(cat(2, extractdata(dlJ_val),extractdata(dlJ_fake))));
+                imagesc([img_I img_J]);axis image
 
                 % Update the title with training progress information.
                 t_duration      = duration(0,0,toc(start),'Format','hh:mm:ss');
@@ -121,10 +122,10 @@ function [encoder decoder D_I D_J tr_info] = tr_translaters_cyc ...
     end
     
     allLosses           = gather(allLosses);  
-    info.loss_encoder   = allLosses(:,1);
-    info.loss_decoder   = allLosses(:,2);
-    info.loss_D_I       = allLosses(:,3);
-    info.loss_D_J       = allLosses(:,4);    
+    tr_info.loss_encoder   = allLosses(:,1);
+    tr_info.loss_decoder   = allLosses(:,2);
+    tr_info.loss_D_I       = allLosses(:,3);
+    tr_info.loss_D_J       = allLosses(:,4);    
 end
 
 
@@ -181,19 +182,26 @@ function [loss_encoder, loss_decoder, loss_D_I, loss_D_J] = f_ganLoss(dlI_pred,.
                                                                       dlJ,dlJ_fakefake,...
                                                                       gamma)
     
-    loss_D_I_real   = -mean(log(sigmoid(dlI_pred)));
-    loss_D_I_fake   = -mean(log(1-sigmoid(dlI_fake_pred)));           
+%     loss_D_I_real   = -mean(log(sigmoid(dlI_pred)));
+%     loss_D_I_fake   = -mean(log(1-sigmoid(dlI_fake_pred)));           
+% 
+%     loss_D_J_real   = -mean(log(sigmoid(dlJ_pred)));
+%     loss_D_J_fake   = -mean(log(1-sigmoid(dlJ_fake_pred)));
 
-    loss_D_J_real   = -mean(log(sigmoid(dlJ_pred)));
-    loss_D_J_fake   = -mean(log(1-sigmoid(dlJ_fake_pred)));
-           
+    loss_D_I_real   = mean((1 - sigmoid(dlI_pred)).^2);
+    loss_D_I_fake   = mean(sigmoid(dlI_fake_pred).^2);           
+
+    loss_D_J_real   = mean((1 - sigmoid(dlJ_pred)).^2);
+    loss_D_J_fake   = mean(sigmoid(dlJ_fake_pred).^2);           
+
     loss_D_I        = loss_D_I_real + loss_D_I_fake;
     loss_D_J        = loss_D_J_real + loss_D_J_fake;
 
-    loss_cyc        = (mse(dlI,dlI_fakefake) + mse(dlJ,dlJ_fakefake))/2;
+    loss_cyc        = (mse(dlI,dlI_fakefake) + mse(dlJ,dlJ_fakefake))/2;   % L2 like norm
+%    loss_cyc        = (mean(abs(dlI(:)-dlI_fakefake(:))) + mean(abs(dlJ(:)-dlJ_fakefake(:))))/2;    % L1 norm
     
-    loss_encoder    = - mean(log(sigmoid(dlJ_fake_pred)))+gamma*loss_cyc;
-    loss_decoder    = - mean(log(sigmoid(dlI_fake_pred)))+gamma*loss_cyc;
+    loss_encoder    = - loss_D_J_fake + gamma*loss_cyc;
+    loss_decoder    = - loss_D_I_fake + gamma*loss_cyc;
 
 end
 

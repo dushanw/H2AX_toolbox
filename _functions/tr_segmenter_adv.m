@@ -144,7 +144,7 @@ end
 
 function [loss_generator, loss_discriminator, allLosses] = f_ganLoss(dlYPred,dlYPred_gen,dlL,dlL_gen,gamma)
     
-    delta = 0;%1e-3;                                                           % slack value
+    delta = 1e-3;                                                           % slack value
     
     d_loss_gen      = -mean(log(delta+1-sigmoid(dlYPred_gen)));             % calculate losses for the discriminator network.
     d_loss_real     = -mean(log(delta+sigmoid(dlYPred)));

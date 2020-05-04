@@ -24,10 +24,10 @@ function pram = pram_init()
 
     pram.numEpochs                  = 1;      
     pram.miniBatchSize              = 48;
-    pram.learnRateImgprocessor      = 0.0002;
-    pram.learnRateDiscriminator     = 0.0001;    
-    pram.learnRate_encoder          = 0.0002;
-    pram.learnRate_decoder          = 0.0002;
+    pram.learnRateImgprocessor      = 0.002;% 0.0002;
+    pram.learnRateDiscriminator     = 0.001;% 0.0001;    
+    pram.learnRate_encoder          = 0.002;% 0.0002;
+    pram.learnRate_decoder          = 0.002;% 0.0002;
     
     pram.gradientDecayFactor        = 0.5;
     pram.squaredGradientDecayFactor = 0.999;

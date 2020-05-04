@@ -15,34 +15,50 @@ function [encoder decoder D_I D_J tr_info] = tr_translaters_cyc ...
     %% set other datastore parameters
     I_temp          = imds_I.read;     
     imds_I.reset;    
-    N_PatchesPerImg = prod(size(I_temp)./patchSize)*16;
-    N_files         = min(length(imds_I.Files),length(imds_J.Files));
+    N_PatchesPerImg = round(prod(size(I_temp)./patchSize)*16);
     
-    %% image-patch datastores
-    patchds_tr                  = randomPatchExtractionDatastore(imds_I.subset(1:N_files),imds_J.subset(1:N_files),...
+    %% divide datastores training and validation
+    [imds_I_tr imds_I_val]      = ds_divide_ds_trVal(imds_I,1);
+    [imds_J_tr imds_J_val]      = ds_divide_ds_trVal(imds_J,1);
+    
+    N_files                     = min(length(imds_I_tr.Files),length(imds_J_tr.Files));
+    
+    %% validation data
+    patchds_val                 = randomPatchExtractionDatastore(imds_I_val,...
+                                                                 imds_J_val,...
                                                                  patchSize,'PatchesPerImage',N_PatchesPerImg);
-    patchds_tr.MiniBatchSize    = miniBatchSize;
+    patchds_val.MiniBatchSize   = miniBatchSize;
+    
+    data_val        = read(patchds_val);
+    I_val           = cat(4,data_val.InputImage{:});
+    J_val           = cat(4,data_val.ResponseImage{:});
 
+    dlI_val         = dlarray(I_val, 'SSCB');
+    dlJ_val         = dlarray(J_val, 'SSCB');
+
+    if (pram.executionEnvironment == "auto" && canUseGPU) || pram.executionEnvironment == "gpu"
+        dlI_val     = gpuArray(dlI_val);
+        dlJ_val     = gpuArray(dlJ_val);
+    end
+    
+    
+    %% training loop
     figure
     iteration       = 0;
     start           = tic;
     
     for i = 1:pram.numEpochs
+        rand_idx_I = randperm(length(imds_I_tr.Files));        
+        rand_idx_J = randperm(length(imds_J_tr.Files));
 
-        % Reset and shuffle datastore.
-        reset(patchds_tr);
-        data_val        = read(patchds_tr);
-        I_val           = cat(4,data_val.InputImage{:});
-        J_val           = cat(4,data_val.ResponseImage{:});
+        % generate an image-patch datastores with randomly drawn equal number of images form imds_I and imds_J
+        patchds_tr                  = randomPatchExtractionDatastore(imds_I_tr.subset(rand_idx_I(1:N_files)),...
+                                                                     imds_J_tr.subset(rand_idx_J(1:N_files)),...
+                                                                     patchSize,'PatchesPerImage',N_PatchesPerImg);
+        patchds_tr.MiniBatchSize    = miniBatchSize;
 
-        dlI_val         = dlarray(I_val, 'SSCB');
-        dlJ_val         = dlarray(J_val, 'SSCB');
-
-        if (pram.executionEnvironment == "auto" && canUseGPU) || pram.executionEnvironment == "gpu"
-            dlI_val     = gpuArray(dlI_val);
-            dlJ_val     = gpuArray(dlJ_val);
-        end
-
+%         % Reset and shuffle datastore.
+%         reset(patchds_tr);
 
         while hasdata(patchds_tr)
             iteration   = iteration + 1;
@@ -154,7 +170,8 @@ function    [gradients_encoder,...
     dlJ_fakefake_pred   = forward(D_J, dlJ_fakefake);    
 
     % Calculate the GAN loss
-    [loss_encoder, loss_decoder, loss_D_I, loss_D_J] = f_ganLoss(dlI_pred,...
+    [loss_encoder, loss_decoder, loss_D_I, loss_D_J, loss_cyc_enc, loss_cyc_dec] = ...
+                                                                 f_ganLoss(dlI_pred,...
                                                                  dlJ_pred,...
                                                                  dlI_fake_pred,...
                                                                  dlJ_fake_pred,...
@@ -162,9 +179,10 @@ function    [gradients_encoder,...
                                                                  dlJ,dlJ_fakefake,...
                                                                  pram.gammaCyc);
 
-    disp(sprintf('%d %d\t L_enc %d \t L_dec %d \t L_DI %d \t L_DJ %d', epoch,iteration, loss_encoder, loss_decoder, loss_D_I, loss_D_J));    
+    disp(sprintf('%d %d\t L_encCyc %d\t L_decCyc %d  \t L_enc %d \t L_dec %d \t L_DI %d \t L_DJ %d',...
+                epoch,iteration, loss_cyc_enc, loss_cyc_dec, loss_encoder, loss_decoder, loss_D_I, loss_D_J));    
     
-    losses_itr = [loss_encoder, loss_decoder, loss_D_I, loss_D_J];
+    losses_itr = [loss_encoder, loss_decoder, loss_D_I, loss_D_J, loss_cyc_enc, loss_cyc_dec];
 
     % For each network, calculate the gradients with respect to the loss.
     gradients_encoder   = dlgradient(loss_encoder, encoder.Learnables,'RetainData',true);    
@@ -174,7 +192,8 @@ function    [gradients_encoder,...
 end
 
 
-function [loss_encoder, loss_decoder, loss_D_I, loss_D_J] = f_ganLoss(dlI_pred,...
+function [loss_encoder, loss_decoder, loss_D_I, loss_D_J, loss_cyc_enc, loss_cyc_dec] = ...
+                                                                      f_ganLoss(dlI_pred,...
                                                                       dlJ_pred,...
                                                                       dlI_fake_pred,...
                                                                       dlJ_fake_pred,...
@@ -203,6 +222,8 @@ function [loss_encoder, loss_decoder, loss_D_I, loss_D_J] = f_ganLoss(dlI_pred,.
     loss_encoder    = - loss_D_J_fake + gamma*loss_cyc;
     loss_decoder    = - loss_D_I_fake + gamma*loss_cyc;
 
+    loss_cyc_enc    = mse(dlJ,dlJ_fakefake);
+    loss_cyc_dec    = mse(dlI,dlI_fakefake);
 end
 
 

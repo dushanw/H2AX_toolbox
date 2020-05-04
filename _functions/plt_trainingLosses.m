@@ -5,7 +5,7 @@ function plt_trainingLosses(tr_info)
     figure;
     subplot(1,3,1)
     plot(tr_info.loss_imgprocessor);hold on
-    plot(tr_info.loss_discriminator);
+    plot(tr_info.loss_D_seg);
     set(gca,'fontsize',FS)
     xlabel('Iteration')
     ylabel('Loss')

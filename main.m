@@ -3,48 +3,26 @@
 addpath(genpath('./_functions/'))
 addpath(genpath('./_CLASSES/'))
 
-parm        = pram_init();
-h2ax_mic    = DABBA_MU(parm);
+pram        = pram_init();
 
+pram.Nx     = 128;
+h2ax_mic    = DABBA_MU(pram);
+
+%% train SEG
 % h2ax_mic.train_direct_imgprocessor;
-% h2ax_mic.train_adversarial;
+h2ax_mic.train_adversarial;
 
-h2ax_mic.pram.gammaCyc = 0.001
+%% train TRNS
+namestem = sprintf('Nx_%d_deep_enc_dec',pram.Nx);
+h2ax_mic.pram.numEpochs     = 2;
+h2ax_mic.pram.gammaCyc      = 0.1;
+h2ax_mic.pram.miniBatchSize = 12;         
 h2ax_mic.train_cycle;
+save(['./_trainedNetworks/' sprintf('%s_%s.mat',date,namestem)],'h2ax_mic');
 
-figure;
-subplot(1,2,1);
-plot(h2ax_mic.tr_info.loss_encoder);hold on;
-plot(h2ax_mic.tr_info.loss_decoder	)
-subplot(1,2,2);
-plot(h2ax_mic.tr_info.loss_D_I);hold on;
-plot(h2ax_mic.tr_info.loss_D_J)
-
-
-
-
-
-
-
-
-%% plot losses
-plt_trainingLosses(h2ax_mic.tr_info)
-
-%% run test
-h2ax_mic.imds_gt.reset;
-h2ax_mic.pxds_gt.reset;
-
-I_test      = h2ax_mic.imds_gt.read;
-L_test_gt   = h2ax_mic.pxds_gt.read;
-L_test_gt   = L_test_gt{1}=='fg';
-
-dlI_test    = dlarray(I_test, 'SSCB');
-dlL_test    = predict(h2ax_mic.imgprocessor,dlI_test);
-L_test      = gather(dlL_test.extractdata);
-L_test      = L_test(:,:,2)>.5;   
-
-count       = plt_segmentation(I_test,L_test,L_test_gt,'./__results/pltseg_test_original')
-
-
-
+%% plots
+savedir = ['./__results/exp_throughEncDec/' namestem '/'];
+plt_translation(h2ax_mic.imds_gt,h2ax_mic.imds_exp,h2ax_mic.encoder,h2ax_mic.decoder,savedir)
+counts = plt_segmentation(h2ax_mic.imds_gt.subset(1:2),[],h2ax_mic.pxds_gt,[],[],h2ax_mic.imgprocessor,savedir)
+% <formulate a loss plot next. Modify 'plt_trainingLosses.m'>
 

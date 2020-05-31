@@ -18,6 +18,8 @@ function [encoder decoder D_I D_J tr_info] = tr_translaters_cyc ...
     N_PatchesPerImg = round(prod(size(I_temp)./patchSize)*16);
     
     %% divide datastores training and validation
+    imds_I                      = shuffle(imds_I);
+    imds_J                      = shuffle(imds_J);
     [imds_I_tr imds_I_val]      = ds_divide_ds_trVal(imds_I,1);
     [imds_J_tr imds_J_val]      = ds_divide_ds_trVal(imds_J,1);
     
@@ -48,17 +50,31 @@ function [encoder decoder D_I D_J tr_info] = tr_translaters_cyc ...
     start           = tic;
     
     for i = 1:pram.numEpochs
-        rand_idx_I = randperm(length(imds_I_tr.Files));        
-        rand_idx_J = randperm(length(imds_J_tr.Files));
-
+        imds_I_tr = shuffle(imds_I_tr);
+        imds_J_tr = shuffle(imds_J_tr);
         % generate an image-patch datastores with randomly drawn equal number of images form imds_I and imds_J
-        patchds_tr                  = randomPatchExtractionDatastore(imds_I_tr.subset(rand_idx_I(1:N_files)),...
-                                                                     imds_J_tr.subset(rand_idx_J(1:N_files)),...
+        patchds_tr                  = randomPatchExtractionDatastore(imds_I_tr.subset(1:N_files),...
+                                                                     imds_J_tr.subset(1:N_files),...
                                                                      patchSize,'PatchesPerImage',N_PatchesPerImg);
         patchds_tr.MiniBatchSize    = miniBatchSize;
-
+        patchds_tr = shuffle(patchds_tr);
+%      for i = 1:pram.numEpochs        
 %         % Reset and shuffle datastore.
 %         reset(patchds_tr);
+        
+                   
+%         data_val         = read(patchds_tr);
+%         I_val        = cat(4,data_val.InputImage{:});
+%         J_val        = cat(4,data_val.ResponseImage{:});
+% 
+%         dlI_val      = dlarray(I_val, 'SSCB');
+%         dlJ_val      = dlarray(J_val, 'SSCB');
+% 
+%         if (pram.executionEnvironment == "auto" && canUseGPU) || pram.executionEnvironment == "gpu"
+%             dlI_val      = gpuArray(dlI_val);
+%             dlJ_val      = gpuArray(dlJ_val);
+%         end
+
 
         while hasdata(patchds_tr)
             iteration   = iteration + 1;
@@ -122,10 +138,14 @@ function [encoder decoder D_I D_J tr_info] = tr_translaters_cyc ...
                 dlJ_fake    = predict(encoder,dlI_val);
                 dlI_fake    = predict(decoder,dlJ_val);
          
-                img_I       = rescale(imtile(cat(2, extractdata(dlI_val),extractdata(dlI_fake))));
-                img_J       = rescale(imtile(cat(2, extractdata(dlJ_val),extractdata(dlJ_fake))));
+%                 img_I       = rescale(imtile(cat(2, extractdata(dlI_val),extractdata(dlI_fake))));
+%                 img_J       = rescale(imtile(cat(2, extractdata(dlJ_val),extractdata(dlJ_fake))));                
+                img_I       = imtile(cat(2, extractdata(dlI_val),extractdata(dlI_fake)));
+                img_J       = imtile(cat(2, extractdata(dlJ_val),extractdata(dlJ_fake)));
+
                 imagesc([img_I img_J]);axis image
 
+                
                 % Update the title with training progress information.
                 t_duration      = duration(0,0,toc(start),'Format','hh:mm:ss');
                 title(...
@@ -200,18 +220,18 @@ function [loss_encoder, loss_decoder, loss_D_I, loss_D_J, loss_cyc_enc, loss_cyc
                                                                       dlI,dlI_fakefake,...
                                                                       dlJ,dlJ_fakefake,...
                                                                       gamma)
-    
-%     loss_D_I_real   = -mean(log(sigmoid(dlI_pred)));
-%     loss_D_I_fake   = -mean(log(1-sigmoid(dlI_fake_pred)));           
+    delta = 1e-3;                                                           % slack value
+    loss_D_I_real   = -mean(log(delta+sigmoid(dlI_pred)));
+    loss_D_I_fake   = -mean(log(delta+1-sigmoid(dlI_fake_pred)));           
+
+    loss_D_J_real   = -mean(log(delta+sigmoid(dlJ_pred)));
+    loss_D_J_fake   = -mean(log(delta+1-sigmoid(dlJ_fake_pred)));
+
+%     loss_D_I_real   = mean((1 - sigmoid(dlI_pred)));
+%     loss_D_I_fake   = mean(sigmoid(dlI_fake_pred));           
 % 
-%     loss_D_J_real   = -mean(log(sigmoid(dlJ_pred)));
-%     loss_D_J_fake   = -mean(log(1-sigmoid(dlJ_fake_pred)));
-
-    loss_D_I_real   = mean((1 - sigmoid(dlI_pred)).^2);
-    loss_D_I_fake   = mean(sigmoid(dlI_fake_pred).^2);           
-
-    loss_D_J_real   = mean((1 - sigmoid(dlJ_pred)).^2);
-    loss_D_J_fake   = mean(sigmoid(dlJ_fake_pred).^2);           
+%     loss_D_J_real   = mean((1 - sigmoid(dlJ_pred)));
+%     loss_D_J_fake   = mean(sigmoid(dlJ_fake_pred));           
 
     loss_D_I        = loss_D_I_real + loss_D_I_fake;
     loss_D_J        = loss_D_J_real + loss_D_J_fake;
@@ -222,8 +242,8 @@ function [loss_encoder, loss_decoder, loss_D_I, loss_D_J, loss_cyc_enc, loss_cyc
     loss_encoder    = - loss_D_J_fake + gamma*loss_cyc;
     loss_decoder    = - loss_D_I_fake + gamma*loss_cyc;
 
-    loss_cyc_enc    = mse(dlJ,dlJ_fakefake);
-    loss_cyc_dec    = mse(dlI,dlI_fakefake);
+    loss_cyc_enc    = gamma*mse(dlJ,dlJ_fakefake)/2;
+    loss_cyc_dec    = gamma*mse(dlI,dlI_fakefake)/2;
 end
 
 

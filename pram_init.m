@@ -5,7 +5,7 @@ function pram = pram_init()
     
     pram.dir_dataroot   = '/home/harvard/Dropbox (Harvard University)/WorkingData/20200426_Bevin_Nuc/Nuclei Counter (20x, 40x)/20x Nuclei Counter/';
     pram.dir_imds_gt    = [pram.dir_dataroot 'Knime segmentation maps/Originals'];  
-    pram.dir_imds_exp   = [pram.dir_dataroot '20.02.21 Ki67 24h set A'];  
+    pram.dir_imds_exp   = [pram.dir_dataroot '20.02.24 Ki67 24h set B']; %  '20.02.21 Ki67 24h set A', '20.02.24 Ki67 24h set B' 
     pram.dir_pxds_gt    = [pram.dir_dataroot 'Knime segmentation maps/pxd'];  
 
     pram.ds_imread_channedls                = 1;
@@ -24,10 +24,10 @@ function pram = pram_init()
 
     pram.numEpochs                  = 1;      
     pram.miniBatchSize              = 48;
-    pram.learnRateImgprocessor      = 0.002;% 0.0002;
-    pram.learnRateDiscriminator     = 0.001;% 0.0001;    
-    pram.learnRate_encoder          = 0.002;% 0.0002;
-    pram.learnRate_decoder          = 0.002;% 0.0002;
+    pram.learnRateImgprocessor      = 0.0002;% 0.0002;
+    pram.learnRateDiscriminator     = 0.0001;% 0.0001;    
+    pram.learnRate_encoder          = 0.0002;% 0.0002;
+    pram.learnRate_decoder          = 0.0002;% 0.0002;
     
     pram.gradientDecayFactor        = 0.5;
     pram.squaredGradientDecayFactor = 0.999;

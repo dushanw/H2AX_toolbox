@@ -9,12 +9,12 @@ function pram = pram_init()
     pram.dir_pxds_gt    = [pram.dir_dataroot 'Knime segmentation maps/pxd'];  
 
     pram.ds_imread_channedls                = 1;
-    pram.ds_imread_channedls_scale_method   = 'rescale10k';     % {'rescale10k','rescale1k','max','mean','none'} 
-    pram.exp_type                           = 'h2ax';           % {'h2ax_direct','h2ax_adv','h2ax'}
+    pram.ds_imread_channedls_scale_method   = 'rescale10k';                 % {'log','mean-histeq','mean-zerocenter','max-zerocenter','rescale10k-zerocenter','rescale10k','rescale1k','max','mean','none'} 
+    pram.exp_type                           = 'h2ax';                       % {'h2ax_direct','h2ax_adv','h2ax'}
 
     pram.Nx                 = 128;
     pram.Nc                 = 1;
-    pram.N_classes          = 2;                                % # segmented classes
+    pram.N_classes          = 2;                                            % # segmented classes
     pram.classNames         = ["bg","fg"];
     pram.pxLblIds           = [0 1];
     

@@ -36,7 +36,7 @@ classdef DABBA_MU < handle
 
        function train_adversarial(self)
            [self.imgprocessor self.discriminators{3} self.tr_info] = ...
-                tr_segmenter_adv(self.imgprocessor,self.discriminators{3},self.imds_gt,self.pxds_gt,self.pram)           
+                tr_segmenter_adv(self.imgprocessor,self.discriminators{3},self.imds_gt,self.pxds_gt,self.pram);           
        end 
         
        function train_cycle(self)                

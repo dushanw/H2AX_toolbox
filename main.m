@@ -10,8 +10,14 @@ pram.Nx     = 128;
 h2ax_mic    = DABBA_MU(pram);
 
 %% train SEG
-% h2ax_mic.train_direct_imgprocessor;
-% h2ax_mic.train_adversarial;
+namestem = sprintf('Nx_%d_setB_ImgProc-rescale10k-softLbls',pram.Nx);
+h2ax_mic.pram.miniBatchSize = 32;
+h2ax_mic.pram.numEpochs     = 200;
+h2ax_mic.pram.gammaMse      = 0;
+%h2ax_mic.train_direct_imgprocessor;
+tic
+h2ax_mic.train_adversarial;
+toc
 
 %% train TRNS
 namestem = sprintf('Nx_%d_shallow_setB_enc_dec',pram.Nx);
@@ -27,8 +33,12 @@ h2ax_mic.train_cycle;
 save(['./_trainedNetworks/' sprintf('%s_%s.mat',date,namestem)],'h2ax_mic');
 
 %% plots
-savedir = ['./__results/exp_throughEncDec/' namestem '_' date '/']
-plt_translation(h2ax_mic.imds_gt,h2ax_mic.imds_exp,h2ax_mic.encoder,h2ax_mic.decoder,savedir)
-counts = plt_segmentation(h2ax_mic.imds_gt.subset(1:2),[],h2ax_mic.pxds_gt,[],[],h2ax_mic.imgprocessor,savedir)
+savedir = ['./__results/exp_testTrainingCoditions/' namestem '_' date '/']
+%plt_translation(h2ax_mic.imds_gt,h2ax_mic.imds_exp,h2ax_mic.encoder,h2ax_mic.decoder,savedir)
+counts = plt_segmentation(h2ax_mic.imds_gt.subset(1:5),[],h2ax_mic.pxds_gt,[],[],h2ax_mic.imgprocessor,savedir);
+counts = plt_segmentation(h2ax_mic.imds_gt            ,[],h2ax_mic.pxds_gt,[],[],h2ax_mic.imgprocessor,savedir);
+
+counts = plt_segmentation(h2ax_mic.imds_exp.subset(1:3),[],[],[],[],h2ax_mic.imgprocessor,savedir);
+
 % <formulate a loss plot next. Modify 'plt_trainingLosses.m'>
 

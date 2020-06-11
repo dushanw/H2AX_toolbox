@@ -2,21 +2,29 @@
 % edit this file to initiate parameters for the dabba_mu object
 
 function pram = pram_init()
-    
-    pram.dir_dataroot   = '/home/harvard/Dropbox (Harvard University)/WorkingData/20200426_Bevin_Nuc/Nuclei Counter (20x, 40x)/20x Nuclei Counter/';
-    pram.dir_imds_gt    = [pram.dir_dataroot 'Knime segmentation maps/Originals'];  
-    pram.dir_imds_exp   = [pram.dir_dataroot '20.02.24 Ki67 24h set B']; %  '20.02.21 Ki67 24h set A', '20.02.24 Ki67 24h set B' 
-    pram.dir_pxds_gt    = [pram.dir_dataroot 'Knime segmentation maps/pxd'];  
+
+    pram.dir_dataroot_0     = '/home/harvard/Dropbox (Harvard University)/WorkingData/20200426_Bevin_Nuc/Nuclei Counter (20x, 40x)/20x Nuclei Counter/20200609_20x_annotation_hand/';
+    pram.dir_imds_gt_0      = [pram.dir_dataroot_0 'Originals'];  
+    pram.dir_imds_exp_0     = [pram.dir_dataroot_0 'Originals'];
+    pram.dir_pxds_gt_hand_0 = [pram.dir_dataroot_0 'Pxd_hand'];  
+    pram.dir_pxds_gt_algo_0 = [pram.dir_dataroot_0 'Pxd_algo'];  
+
+    pram.dir_dataroot   = './_DATA/Tr_data/';
+    pram.dir_imds_gt    = [pram.dir_dataroot 'Originals'];  
+    pram.dir_imds_exp   = [pram.dir_dataroot 'Originals']; 
+    pram.dir_pxds_gt    = [pram.dir_dataroot 'pxd'];  
 
     pram.ds_imread_channedls                = 1;
-    pram.ds_imread_channedls_scale_method   = 'rescale10k';                 % {'log','mean-histeq','mean-zerocenter','max-zerocenter','rescale10k-zerocenter','rescale10k','rescale1k','max','mean','none'} 
-    pram.exp_type                           = 'h2ax';                       % {'h2ax_direct','h2ax_adv','h2ax'}
+    pram.ds_imread_channedls_scale_method   = 'rescale10k';                  % {'log','mean-histeq','mean-zerocenter','max-zerocenter','rescale10k-zerocenter','rescale10k','rescale1k','max','mean','none'} 
+    pram.exp_type                           = 'h2ax_adv';                       % {'h2ax_direct','h2ax_adv','h2ax'}
 
-    pram.Nx                 = 128;
-    pram.Nc                 = 1;
-    pram.N_classes          = 2;                                            % # segmented classes
-    pram.classNames         = ["bg","fg"];
-    pram.pxLblIds           = [0 1];
+    pram.Nx             = 128;
+    pram.Nc             = 1;
+    pram.N_classes      = 2;                                                % # segmented classes
+    pram.N_wClasses     = 1;                                                % weighted classes such as hand-segmented
+    pram.classNames     = ["bg","fg"];
+    pram.wclassNames    = ["w-bg"];
+    pram.pxLblIds       = [0 1];
     
     pram.executionEnvironment   = 'auto';
     pram.gammaMse               = 0.01;

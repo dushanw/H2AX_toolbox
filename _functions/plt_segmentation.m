@@ -26,7 +26,10 @@ function count = plt_segmentation(imds_I,imds_J,pxds_I,encoder,decoder,imgproces
             
             J_now               = gather(dlI_now.extractdata);    
             L_now               = gather(dlL_now.extractdata);
-            L_now               = L_now(:,:,2)>.5;        % threshold the channel 2 from the output   
+            
+            se = strel('disk',2);
+            L_now = imopen(L_now(:,:,2),se)>0.9;
+            
             
             figure;
             h = imshow(J_now,[]);
@@ -44,12 +47,12 @@ function count = plt_segmentation(imds_I,imds_J,pxds_I,encoder,decoder,imgproces
                     plot(c,r,'Or','MarkerSize',6,'LineWidth',1);                                  
                 end
           
-%                 if (size(B,1)>0)                
-%                     for k=1:size(B,1)
-%                         Outline = B{k};
-%                         plot(Outline(:,2),Outline(:,1),'r','LineWidth',1);              
-%                     end
-%                 end          
+                if (size(B,1)>0)                
+                    for k=1:size(B,1)
+                        Outline = B{k};
+                        plot(Outline(:,2),Outline(:,1),'r','LineWidth',1);              
+                    end
+                end          
             end
             
             
@@ -63,12 +66,12 @@ function count = plt_segmentation(imds_I,imds_J,pxds_I,encoder,decoder,imgproces
                 r = round(STATS(k,1).Centroid(2));
                 plot(c,r,'+g','MarkerSize',6,'LineWidth',1);                                  
             end
-%             if (size(B,1)>0)
-%                 for k=1:size(B,1)
-%                     Outline = B{k};
-%                     plot(Outline(:,2),Outline(:,1),'b','LineWidth',1);
-%                 end
-%             end
+            if (size(B,1)>0)
+                for k=1:size(B,1)
+                    Outline = B{k};
+                    plot(Outline(:,2),Outline(:,1),'b','LineWidth',1);
+                end
+            end
             
             hold off
             saveas(h,[savedir 'I_L/' img_name]);    

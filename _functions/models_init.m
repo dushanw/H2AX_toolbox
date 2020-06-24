@@ -12,8 +12,8 @@ function models = models_init(pram)
         case 'h2ax_adv'
             models.encoder          = gendlnet_dummy           (pram.Nx,pram.Nc);                    % dummy network 
             models.decoder          = gendlnet_dummy           (pram.Nx,pram.Nc);
-            models.imgprocessor     = gendlnet_dncnnSegmenter  (pram.Nx,pram.Nc,pram.N_classes+pram.N_wClasses);   % no-bg-channel     
-            models.discriminators{3}= gendlnet_stdDiscriminator(pram.Nx,pram.N_classes+pram.N_wClasses);
+            models.imgprocessor     = gendlnet_dncnnSegmenter  (pram.Nx,pram.Nc,pram.N_classes);   % no-bg-channel     
+            models.discriminators{3}= gendlnet_stdDiscriminator(pram.Nx,pram.N_classes);
         case 'h2ax'
             models.encoder          = gendlnet_unetTranslator(pram.Nx,pram.Nc);
             models.decoder          = gendlnet_unetTranslator(pram.Nx,pram.Nc);

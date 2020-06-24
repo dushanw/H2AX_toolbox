@@ -26,11 +26,11 @@ classdef DABBA_MU < handle
        obj.discriminators   = models.discriminators;
     end
 
-    function train_direct_imgprocessor(self)
-       self.imgprocessor    = tr_segmenter(self.imgprocessor,self.trData,self.pram);
+    function tr_segmenter_dirct(self)
+       self.imgprocessor    = tr_segmenter_dirct(self.imgprocessor,self.trData,self.pram);
     end 
 
-    function train_adversarial(self)
+    function tr_segmenter_adv(self)
        [self.imgprocessor self.discriminators{3} self.tr_info] = ...
             tr_segmenter_adv(self.imgprocessor,self.discriminators{3},self.trData,self.pram);           
     end 
@@ -41,8 +41,7 @@ classdef DABBA_MU < handle
                                self.decoder,...
                                self.discriminators{1},...
                                self.discriminators{2},...
-                               self.imds_gt,...
-                               self.imds_exp,...
+                               self.trData,...                               
                                self.pram);
     end
   end

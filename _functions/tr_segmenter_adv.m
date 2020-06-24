@@ -6,6 +6,12 @@ function [imgprocessor discriminator info] = tr_segmenter_adv(imgprocessor,discr
     
   N_iterations  = pram.numEpochs * (floor(size(trData.I_tr,4)/pram.miniBatchSize)-1);
   for epch = 1:pram.numEpochs 
+    % update learning rate if needed
+    if mod(epch,pram.learnRateDropInterval) == 0
+      pram.learnRateImgprocessor  = pram.learnRateImgprocessor * pram.learnRateDropFactor
+      pram.learnRateDiscriminator = pram.learnRateDiscriminator* pram.learnRateDropFactor
+    end
+    
     b_shuffle   = randperm(size(trData.I_tr,4));
     trData.I_tr = trData.I_tr(:,:,:,b_shuffle);
     trData.L_tr = trData.L_tr(:,:,:,b_shuffle);
@@ -17,8 +23,13 @@ function [imgprocessor discriminator info] = tr_segmenter_adv(imgprocessor,discr
           mb_end    = mb_str+pram.miniBatchSize-1;          
           I_tr      = gpuArray(dlarray(trData.I_tr(:,:,:,mb_str:mb_end),'SSCB'));
           L_tr      = gpuArray(dlarray(trData.L_tr(:,:,:,mb_str:mb_end),'SSCB'));          
-          L_tr      = cat(3,cat(3,L_tr(:,:,1,:)*-1+1,L_tr(:,:,1:2,:)));       % ch-dim is [bg, fg hand-annotated-bg]
-
+          
+          L_tr      = cat(3,cat(3,L_tr(:,:,1,:)*-1+1,L_tr(:,:,1:2,:)));       % ch-dim is [bg, fg hand-annotated-bg] bg and h-a-bg overlaps                    
+%          L_tr      = cat(3,cat(3,(L_tr(:,:,1,:)+L_tr(:,:,2,:))*-1+1,L_tr(:,:,1:2,:)));       % ch-dim is [bg, fg hand-annotated-bg] no overlap
+          
+          
+          L_tr_wbg  = [];
+          
           % Evaluate the model gradients and the generator state
           [grad_G,...
            grad_D,... 
@@ -55,10 +66,12 @@ function [imgprocessor discriminator info] = tr_segmenter_adv(imgprocessor,discr
                          pram.learnRateImgprocessor   , pram.gradientDecayFactor , pram.squaredGradientDecayFactor);
 
           % Every 10 iterations, display validation results                    
-          if mod(iteration,10) == 0 || iteration == 1
+          if mod(iteration,20) == 0 || iteration == 1
               N_val     = 4;
-              b_shuf_vl = randperm(size(trData.I_vl,4));
-              b_inds    = b_shuf_vl(1:N_val);
+%              b_shuf_vl = randperm(size(trData.I_vl,4));              
+              % b_shuf_vl = 40:50;              
+              % b_inds    = b_shuf_vl(1:N_val);
+              b_inds    = [22 229 26 49]
               
               I_vl      = gpuArray(dlarray(trData.I_vl(:,:,:,b_inds),'SSCB'));
               L_vl_real = gpuArray(dlarray(trData.L_vl(:,:,:,b_inds),'SSCB'));
@@ -72,7 +85,8 @@ function [imgprocessor discriminator info] = tr_segmenter_adv(imgprocessor,discr
               subplot(1,2,1);imagesc(I,[0 5]);axis image;colorbar
               subplot(1,2,2);plot(allLosses);
                              legend('LG','LD','Lmse') 
-
+              saveas(gca,sprintf('./_Figs/itr_%0.6d.jpeg',iteration));
+                             
               % Update the title with training progress information.
               D = duration(0,0,toc(start),'Format','hh:mm:ss');
               title(...
@@ -85,10 +99,10 @@ function [imgprocessor discriminator info] = tr_segmenter_adv(imgprocessor,discr
       end
   end
 
-  allLosses               = gather(allLosses);  
-  info.loss_imgprocessor  = allLosses(:,1);
-  info.loss_discriminator = allLosses(:,2);
-  info.loss_mseLike       = allLosses(:,3);
+  allLosses                   = gather(allLosses);  
+  info.loss_adv_imgprocessor  = allLosses(:,1);
+  info.loss_discriminator     = allLosses(:,2);
+  info.loss_mseLike           = allLosses(:,3);
 end
 
 
@@ -110,8 +124,6 @@ function [grad_G, grad_D, state_G, allLosses] = f_modelGradients(G, D, I, L_real
   % Convert the discriminator outputs to probabilities.
   probGenerated = sigmoid(YPred_fake);
   probReal = sigmoid(YPred);
-  % dlY = crossentropy(dlXGenerated,dlL);
-
 
   % Calculate the score of the discriminator.
   scoreDiscriminator = ((mean(probReal)+mean(1-probGenerated))/2);

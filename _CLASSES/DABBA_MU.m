@@ -32,7 +32,7 @@ classdef DABBA_MU < handle
 
     function tr_segmenter_adv(self)
        [self.imgprocessor self.discriminators{3} self.tr_info] = ...
-            tr_segmenter_adv(self.imgprocessor,self.discriminators{3},self.trData,self.pram);           
+            tr_segmenter_adv(self.imgprocessor,self.discriminators{3},self.trData,self.pram);
     end 
 
     function train_cycle(self)                

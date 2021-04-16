@@ -105,7 +105,7 @@ function [ENC DEC D_Igt D_Iexp tr_info] = tr_translaters_cyc ...
                                 extractdata(Iexp_vl (:,:,1,1))]); axis image;axis off;colorbar
         subplot(2,2,2);imagesc(I);                                axis image;axis off;colorbar
         subplot(2,2,3);semilogy(allLosses(:,1:4));                legend('L Enc','L Dec','L D I','L D J') 
-        subplot(2,2,4);semilogy(allLosses(:,5:6));                legend('Lcyc','Lid')                                 
+        subplot(2,2,4);semilogy(allLosses(:,5:6));                legend('Lcyc','Lid')
 
         % Update the title with training progress information.
         t_duration      = duration(0,0,toc(start),'Format','hh:mm:ss');
@@ -114,6 +114,7 @@ function [ENC DEC D_Igt D_Iexp tr_info] = tr_translaters_cyc ...
             "Iteration: " + iteration + ", " + ...
             "Elapsed: " + string(t_duration))
         drawnow
+        saveas(gca,sprintf('./_Figs/itr_%0.6d.jpeg',iteration));
       end      
     end
     % update learning rates

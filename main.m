@@ -9,7 +9,7 @@ pram        = pram_init();
 pram.Nx     = 256;
 h2ax_mic    = DABBA_MU(pram);
 
-%% train seg direct
+%% train SEG direct
 % h2ax_mic.pram.miniBatchSize         = 256;
 % h2ax_mic.pram.numEpochs             = 10;
 % h2ax_mic.pram.learnRateDropFactor   = 0.1;
@@ -27,7 +27,7 @@ h2ax_mic    = DABBA_MU(pram);
 % gt = h2ax_mic.trData.L_vl(:,:,1,1:N_val)+2*h2ax_mic.trData.L_vl(:,:,2,1:N_val);
 % imagesc(imtile(cat(2,I,single(gt),single(C))));axis image
               
-%% train SEG
+%% train SEG adversarial
 % h2ax_mic.pram.miniBatchSize = 32;
 % h2ax_mic.pram.numEpochs     = 50;
 % h2ax_mic.pram.gammaMse      = 100;% 100 was working ok
@@ -60,5 +60,4 @@ h2ax_mic.pram.gammaId                = 0.001;
 
 h2ax_mic.train_cycle;
 save(['./_trainedNetworks/' sprintf('%s_%s.mat',date,namestem)],'h2ax_mic');
-
 

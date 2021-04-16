@@ -8,9 +8,11 @@
 function [ENC DEC D_Igt D_Iexp tr_info] = tr_translaters_cyc ...
          (ENC,DEC,D_Igt,D_Iexp,trData,pram)
 
+  dir_valRes  = ['./_Figs/' date '/tr_translaters_cyc/'];
+  mkdir(dir_valRes)
   figure; set(gcf, 'Units', 'Inches', 'Position', [1,1,18,9])
-  iteration = 0;
-  start     = tic;
+  iteration   = 0;
+  start       = tic;
       
   N_iterations  = pram.numEpochs * (floor(size(trData.I_gt_tr,4)/pram.miniBatchSize)-1);
   for epch = 1:pram.numEpochs           
@@ -114,7 +116,7 @@ function [ENC DEC D_Igt D_Iexp tr_info] = tr_translaters_cyc ...
             "Iteration: " + iteration + ", " + ...
             "Elapsed: " + string(t_duration))
         drawnow
-        saveas(gca,sprintf('./_Figs/itr_%0.6d.jpeg',iteration));
+        saveas(gca,sprintf('%sitr_%0.6d.jpeg',dir_valRes,iteration));
       end      
     end
     % update learning rates
